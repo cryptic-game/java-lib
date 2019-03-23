@@ -3,6 +3,7 @@ package net.cryptic_game.microservice;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -28,6 +29,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	private static final boolean EPOLL = Epoll.isAvailable();
 
 	private String name;
+	private Channel channel;
 
 	public MicroService(String name) {
 		this.name = name;
@@ -53,6 +55,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 					.connect(Config.get(DefaultConfig.MSSOCKET_HOST), Config.getInteger(DefaultConfig.MSSOCKET_PORT))
 					.sync().channel();
 
+			this.channel = channel;
+
 			channel.writeAndFlush(new JSONObject(test).toString());
 
 			channel.closeFuture().syncUninterruptibly();
@@ -66,26 +70,48 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		JSONObject obj = (JSONObject) new JSONParser().parse(msg);
 
 		if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
-				&& obj.get("data") instanceof JSONObject && obj.containsKey("endpoint")
-				&& obj.get("endpoint") instanceof JSONArray) {
-			Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
-			String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
-			
-			JSONObject responseData = this.handle(endpoint, (JSONObject) obj.get("data"));
+				&& obj.get("data") instanceof JSONObject) {
+			JSONObject data = (JSONObject) obj.get("data");
+			UUID tag = UUID.fromString((String) obj.get("uuid"));
+			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray && obj.containsKey("user")
+					&& obj.get("user") instanceof String) {
+				UUID user = UUID.fromString((String) obj.get("user"));
 
-			Map<String, Object> response = new HashMap<String, Object>();
+				Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
+				String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
 
-			response.put("tag", (String) obj.get("tag"));
-			response.put("data", responseData);
+				JSONObject responseData = this.handle(endpoint, data, user);
 
-			this.send(ctx.channel(), new JSONObject(response));
+				Map<String, Object> response = new HashMap<String, Object>();
+
+				response.put("tag", tag.toString());
+				response.put("data", responseData);
+
+				this.send(ctx.channel(), new JSONObject(response));
+			} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
+				String ms = (String) obj.get("ms");
+
+				this.handleFromMicroService(ms, data, tag);
+			}
 		}
 	}
 
-	public abstract JSONObject handle(String[] endpoint, JSONObject data);
+	public abstract JSONObject handle(String[] endpoint, JSONObject data, UUID user);
+
+	public abstract void handleFromMicroService(String ms, JSONObject data, UUID tag);
 
 	private void send(Channel channel, JSONObject obj) {
 		channel.writeAndFlush(Unpooled.copiedBuffer(obj.toString(), CharsetUtil.UTF_8));
+	}
+
+	public void sendToMicroService(String ms, JSONObject data, UUID tag) {
+		Map<String, Object> jsonMap = new HashMap<String, Object>();
+
+		jsonMap.put("ms", ms);
+		jsonMap.put("data", data);
+		jsonMap.put("tag", tag.toString());
+
+		this.send(channel, new JSONObject(jsonMap));
 	}
 
 }

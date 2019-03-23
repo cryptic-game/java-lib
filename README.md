@@ -4,27 +4,7 @@ This is a microservice-libary for java of cryptic-game.
 
 ## Quick-Start
 
-The following code snippet implements an `EchoMicroService`.  
-So every data will be instantly send back to source.   
-
-```java
-public class EchoMicroService extends MicroService {
-
-	public EchoMicroService() {
-		super("echo");
-	}
-
-	@Override
-	public JSONObject handle(String[] endpoint, JSONObject data) {
-		return data; // sends the received data instantly back to sender
-	}
-	
-	public static void main(String[] args) {
-		new EchoMicroService();
-	}
-
-}
-```
+The [EchoMicroService.java](https://github.com/cryptic-game/server/blob/master/test/main/java/net/cryptic_game/server/EchoMicroService.java) implements an `EchoMicroService`.  
 
 ## Maven
 
@@ -43,7 +23,7 @@ To import this libary you can use [maven](https://maven.apache.org/) like this:
 <dependency>
 	<groupId>com.github.cryptic-game</groupId>
 	<artifactId>java-lib</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 </dependency>
 ```
 
