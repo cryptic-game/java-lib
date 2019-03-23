@@ -4,7 +4,7 @@ This is a microservice-libary for java of cryptic-game.
 
 ## Quick-Start
 
-The [EchoMicroService.java](https://github.com/cryptic-game/server/blob/master/test/main/java/net/cryptic_game/server/EchoMicroService.java) implements an `EchoMicroService`.  
+The [EchoMicroService.java](https://github.com/cryptic-game/java-lib/blob/master/src/test/java/net/cryptic_game/microservice/EchoMicroService.java) implements an `EchoMicroService`.  
 
 ## Maven
 
