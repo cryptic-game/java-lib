@@ -21,7 +21,7 @@ public class Database {
 		}
 
 		String path = Config.get(DefaultConfig.STORAGE_LOCATION) + name;
-		
+
 		try {
 			this.connection = DriverManager.getConnection("jdbc:sqlite:" + path);
 		} catch (SQLException e) {
@@ -29,27 +29,17 @@ public class Database {
 		}
 	}
 
-	public ResultSet getResult(String query) {
+	public ResultSet getResult(String query) throws SQLException {
 		PreparedStatement statement;
-		try {
-			statement = this.connection.prepareStatement(query);
+		statement = this.connection.prepareStatement(query);
 
-			return statement.executeQuery();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return null;
+		return statement.executeQuery();
 	}
 
-	public void update(String query) {
-		PreparedStatement statement;
-		try {
-			statement = this.connection.prepareStatement(query);
+	public void update(String query) throws SQLException {
+		PreparedStatement statement = this.connection.prepareStatement(query);
 
-			statement.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		statement.executeUpdate();
 	}
 
 }

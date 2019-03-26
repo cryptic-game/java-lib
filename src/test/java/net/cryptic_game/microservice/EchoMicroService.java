@@ -12,21 +12,20 @@ public class EchoMicroService extends MicroService {
 	}
 
 	@Override
-	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
+	public JSONObject handle(String[] endpoint, final JSONObject data, final UUID user) {
 		System.out.println("endpoint: " + Arrays.toString(endpoint));
 		System.out.println("data: " + data.toString());
 		System.out.println("user: " + user.toString());
 		System.out.println("");
+		
 		return data;
 	}
 
 	@Override
-	public void handleFromMicroService(String ms, JSONObject data, UUID tag) {
-		System.out.println("microservice: " + ms);
+	public JSONObject handleFromMicroService(JSONObject data) {
 		System.out.println("data: " + data.toString());
-		System.out.println("tag: " + tag.toString());
 		
-		this.sendToMicroService(ms, data, tag);
+		return data;
 	}
 
 }

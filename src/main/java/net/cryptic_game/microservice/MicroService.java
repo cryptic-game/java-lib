@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -66,13 +67,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	}
 
 	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+	protected void channelRead0(ChannelHandlerContext ctx, String msg) throws ParseException {
 		JSONObject obj = (JSONObject) new JSONParser().parse(msg);
 
 		if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
 				&& obj.get("data") instanceof JSONObject) {
 			JSONObject data = (JSONObject) obj.get("data");
-			UUID tag = UUID.fromString((String) obj.get("uuid"));
+			UUID tag = UUID.fromString((String) obj.get("tag"));
+
 			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray && obj.containsKey("user")
 					&& obj.get("user") instanceof String) {
 				UUID user = UUID.fromString((String) obj.get("user"));
@@ -91,14 +93,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 			} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
 				String ms = (String) obj.get("ms");
 
-				this.handleFromMicroService(ms, data, tag);
+				this.sendToMicroService(ms, this.handleFromMicroService(data), tag);
 			}
 		}
 	}
 
 	public abstract JSONObject handle(String[] endpoint, JSONObject data, UUID user);
 
-	public abstract void handleFromMicroService(String ms, JSONObject data, UUID tag);
+	public abstract JSONObject handleFromMicroService(JSONObject data);
 
 	private void send(Channel channel, JSONObject obj) {
 		channel.writeAndFlush(Unpooled.copiedBuffer(obj.toString(), CharsetUtil.UTF_8));
@@ -112,6 +114,16 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		jsonMap.put("tag", tag.toString());
 
 		this.send(channel, new JSONObject(jsonMap));
+	}
+	
+	public void sendToUser(UUID user, JSONObject data) {
+		Map<String, Object> jsonMap = new HashMap<String, Object>();
+		
+		jsonMap.put("action", "address");
+		jsonMap.put("user", user.toString());
+		jsonMap.put("data", data);
+		
+		this.send(this.channel, new JSONObject(jsonMap));
 	}
 
 }

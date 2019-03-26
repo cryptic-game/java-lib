@@ -23,7 +23,7 @@ To import this libary you can use [maven](https://maven.apache.org/) like this:
 <dependency>
 	<groupId>com.github.cryptic-game</groupId>
 	<artifactId>java-lib</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.3-SNAPSHOT</version>
 </dependency>
 ```
 
