@@ -7,6 +7,12 @@ public enum DefaultConfig {
 	
 	MSSOCKET_HOST("127.0.0.1"),
 	MSSOCKET_PORT(1239),
+	MYSQL_HOSTNAME("localhost"),
+	MYSQL_USERNAME("cryptic"),
+	MYSQL_PASSWORD("cryptic"),
+	MYSQL_DATABASE("cryptic"),
+	MYSQL_PORT(3306),
+	PRODUCTIVE(true),
 	STORAGE_LOCATION("data/");
 	
 	

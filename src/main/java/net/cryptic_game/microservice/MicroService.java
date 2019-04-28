@@ -1,5 +1,6 @@
 package net.cryptic_game.microservice;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +25,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
+import net.cryptic_game.microservice.db.Database;
+import net.cryptic_game.microservice.db.MySQLDatabase;
+import net.cryptic_game.microservice.db.SQLiteDatabase;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
@@ -31,14 +35,34 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 	private String name;
 	private Channel channel;
+	private Database database;
 
 	public MicroService(String name) {
 		this.name = name;
+
+		try {
+			if (MicroService.isProductive()) {
+				this.database = new MySQLDatabase();
+			} else {
+				this.database = new SQLiteDatabase(name);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
 		this.register();
 	}
 
 	public String getName() {
 		return name;
+	}
+	
+	public Database getDatabase() {
+		return database;
+	}
+	
+	public static boolean isProductive() {
+		return Config.getBoolean(DefaultConfig.PRODUCTIVE);
 	}
 
 	private void register() {
@@ -115,14 +139,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 		this.send(channel, new JSONObject(jsonMap));
 	}
-	
+
 	public void sendToUser(UUID user, JSONObject data) {
 		Map<String, Object> jsonMap = new HashMap<String, Object>();
-		
+
 		jsonMap.put("action", "address");
 		jsonMap.put("user", user.toString());
 		jsonMap.put("data", data);
-		
+
 		this.send(this.channel, new JSONObject(jsonMap));
 	}
 
