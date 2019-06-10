@@ -23,7 +23,7 @@ To import this libary you can use [maven](https://maven.apache.org/) like this:
 <dependency>
 	<groupId>com.github.cryptic-game</groupId>
 	<artifactId>java-lib</artifactId>
-	<version>0.0.4</version>
+	<version>0.0.3-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -39,13 +39,7 @@ Your microservice will be supportet by the [game-server of cryptic](https://gith
 |-------------------|---------------|  
 | MSSOCKET_HOST     | 127.0.0.1     |  
 | MSSOCKET_PORT     | 1239          |  
-| STORAGE_LOCATION  | data/         |
-| MYSQL_HOSTNAME    | cryptic       |
-| MYSQL_PORT        | 3306          |
-| MYSQL_USERNAME    | cryptic       |
-| MYSQL_PASSWORD    | cryptic       |
-| MYSQL_DATABSE     | cryptic       |
-| PRODUCTIVE        | true          |  
+| STORAGE_LOCATION  | data/         |  
 
 ## Wiki
 

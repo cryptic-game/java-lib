@@ -5,35 +5,100 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class Database {
+import org.apache.log4j.Logger;
 
-	private Connection connection;
+import net.cryptic_game.microservice.config.Config;
+import net.cryptic_game.microservice.config.DefaultConfig;
 
-	public Database(Connection connection) {
-		this.connection = connection;
-	}
-	
-	public ResultSet getResult(String query) {
-		PreparedStatement statement;
-		try {
-			statement = this.connection.prepareStatement(query);
+public abstract class Database {
 
-			return statement.executeQuery();
+    private Connection connection;
+
+    private static final Logger logger = Logger.getLogger(Database.class);
+    private static Database database;
+    
+    Database() {
+        try {
+			this.connection = this.createConnection();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return null;
-	}
-
-	public void update(String query) {
-		PreparedStatement statement;
-		try {
-			statement = this.connection.prepareStatement(query);
-
-			statement.executeUpdate();
+    }
+    
+    public boolean isConnected() {
+    	try {
+			return this.connection != null && !this.connection.isClosed();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			return false;
 		}
-	}
+    }
+    
+    public void reconnect() {
+    	logger.error("lost connection to database... trying to reconnect");
+    	while(true) {
+	    	try {
+				this.connection = this.createConnection();
+				logger.info("reconnected to database");
+				return;
+			} catch (SQLException e) {
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				} // 0.5 seconds
+			}
+    	}
+    }
+    
+    public ResultSet getResult(String query, Object... args) {
+    	if(!this.isConnected()) {
+    		this.reconnect();
+    	}
+    	
+        try {
+            PreparedStatement statement;
+            statement = this.connection.prepareStatement(query);
+            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
+
+            return statement.executeQuery();
+        } catch (Exception e) {
+        	this.reconnect();
+        	return this.getResult(query, args);
+        }
+    }
+
+    public void update(String query, Object... args) {
+    	if(!this.isConnected()) {
+    		this.reconnect();
+    	}
+    	
+        try {
+            PreparedStatement statement;
+            statement = this.connection.prepareStatement(query);
+            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
+
+            statement.executeUpdate();
+        } catch (Exception e) {
+        	this.reconnect();
+        	this.update(query, args);
+        }
+    }
+    
+    protected abstract Connection createConnection() throws SQLException;
+    
+    private static Database createDatabase() {
+    	if(Config.getBoolean(DefaultConfig.PRODUCTIVE)) {
+    		return new MySQLDatabase();
+    	} else {
+    		return new SQLiteDatabase();
+    	}
+    }
+    
+    public static Database getDatabase() {
+    	if(database == null) {
+    		database = createDatabase();
+    	}
+    	return database;
+    }
 
 }

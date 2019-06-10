@@ -1,6 +1,5 @@
 package net.cryptic_game.microservice;
 
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,44 +24,26 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
-import net.cryptic_game.microservice.db.Database;
-import net.cryptic_game.microservice.db.MySQLDatabase;
-import net.cryptic_game.microservice.db.SQLiteDatabase;
+import net.cryptic_game.microservice.endpoint.MicroserviceEndpoint;
+import net.cryptic_game.microservice.endpoint.UserEndpoint;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 	private static final boolean EPOLL = Epoll.isAvailable();
 
+	private static HashMap<String[], UserEndpoint> userEndpoints = new HashMap<String[], UserEndpoint>();
+	private static HashMap<String[], MicroserviceEndpoint> microserviceEndpoints = new HashMap<String[], MicroserviceEndpoint>();
+
 	private String name;
 	private Channel channel;
-	private Database database;
 
 	public MicroService(String name) {
 		this.name = name;
-
-		try {
-			if (MicroService.isProductive()) {
-				this.database = new MySQLDatabase();
-			} else {
-				this.database = new SQLiteDatabase(name);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
 		this.register();
 	}
 
 	public String getName() {
 		return name;
-	}
-	
-	public Database getDatabase() {
-		return database;
-	}
-	
-	public static boolean isProductive() {
-		return Config.getBoolean(DefaultConfig.PRODUCTIVE);
 	}
 
 	private void register() {
@@ -99,32 +80,87 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 			JSONObject data = (JSONObject) obj.get("data");
 			UUID tag = UUID.fromString((String) obj.get("tag"));
 
-			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray && obj.containsKey("user")
-					&& obj.get("user") instanceof String) {
-				UUID user = UUID.fromString((String) obj.get("user"));
-
+			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray) {
 				Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
 				String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
 
-				JSONObject responseData = this.handle(endpoint, data, user);
+				if (obj.containsKey("user") && obj.get("user") instanceof String) {
+					UUID user = UUID.fromString((String) obj.get("user"));
 
-				Map<String, Object> response = new HashMap<String, Object>();
+					JSONObject responseData = handle(endpoint, data, user);
 
-				response.put("tag", tag.toString());
-				response.put("data", responseData);
+					Map<String, Object> response = new HashMap<String, Object>();
 
-				this.send(ctx.channel(), new JSONObject(response));
-			} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
-				String ms = (String) obj.get("ms");
+					response.put("tag", tag.toString());
+					response.put("data", responseData);
 
-				this.sendToMicroService(ms, this.handleFromMicroService(data), tag);
+					this.send(ctx.channel(), new JSONObject(response));
+				} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
+					String ms = (String) obj.get("ms");
+
+					this.sendToMicroService(ms, handleFromMicroService(endpoint, data, ms), tag);
+				}
 			}
 		}
 	}
 
-	public abstract JSONObject handle(String[] endpoint, JSONObject data, UUID user);
+	public static JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
+		if (userEndpoints.containsKey(endpoint)) {
+			UserEndpoint userEndpoint = userEndpoints.get(endpoint);
 
-	public abstract JSONObject handleFromMicroService(JSONObject data);
+			if (userEndpoint.checkData(data)) {
+				JSONObject result = userEndpoints.get(endpoint).execute(data, user);
+
+				if (result == null) {
+					result = new JSONObject(new HashMap<String, String>());
+				}
+
+				return result;
+			} else {
+				Map<String, String> jsonMap = new HashMap<String, String>();
+
+				jsonMap.put("error", "invalid input data");
+
+				return new JSONObject(jsonMap);
+			}
+		}
+
+		Map<String, String> jsonMap = new HashMap<String, String>();
+
+		jsonMap.put("error", "unknown service");
+
+		return new JSONObject(jsonMap);
+	}
+
+	public static JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
+		if (microserviceEndpoints.containsKey(endpoint)) {
+			MicroserviceEndpoint microserviceEndpoint = microserviceEndpoints.get(endpoint);
+
+			if (microserviceEndpoint.checkData(data)) {
+				JSONObject result = microserviceEndpoint.execute(data, ms);
+
+				if (result == null) {
+					result = new JSONObject(new HashMap<String, String>());
+				}
+
+				return result;
+			} else {
+				Map<String, String> jsonMap = new HashMap<String, String>();
+
+				jsonMap.put("error", "invalid input data");
+				
+				// maybe sentry here
+
+				return new JSONObject(jsonMap);
+			}
+		}
+
+		Map<String, String> jsonMap = new HashMap<String, String>();
+
+		jsonMap.put("error", "unknown service");
+
+		return new JSONObject(jsonMap);
+	}
 
 	private void send(Channel channel, JSONObject obj) {
 		channel.writeAndFlush(Unpooled.copiedBuffer(obj.toString(), CharsetUtil.UTF_8));
@@ -148,6 +184,22 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		jsonMap.put("data", data);
 
 		this.send(this.channel, new JSONObject(jsonMap));
+	}
+
+	public static void addUserEndpoint(UserEndpoint e, String... endpoint) {
+		if (!userEndpoints.containsKey(endpoint)) {
+			userEndpoints.put(endpoint, e);
+		} else {
+			throw new IllegalStateException("user endpoint already exists: " + Arrays.toString(endpoint));
+		}
+	}
+
+	public static void addMicroserviceEndpoint(MicroserviceEndpoint e, String... endpoint) {
+		if (!microserviceEndpoints.containsKey(endpoint)) {
+			microserviceEndpoints.put(endpoint, e);
+		} else {
+			throw new IllegalStateException("user endpoint already exists: " + Arrays.toString(endpoint));
+		}
 	}
 
 }
