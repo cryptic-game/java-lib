@@ -45,7 +45,7 @@ Your microservice will be supportet by the [game-server of cryptic](https://gith
 | MYSQL_PORT        | 3306          |
 | MYSQL_USERNAME    | cryptic       |
 | MYSQL_PASSWORD    | cryptic       |
-| MYSQL_DATABSE     | cryptic       |
+| MYSQL_DATABASE    | cryptic       |
 | STORAGE_LOCATION  | data/         |  
 
 ## Wiki
