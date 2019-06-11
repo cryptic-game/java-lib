@@ -29,11 +29,11 @@ To import this libary you can use [maven](https://maven.apache.org/) like this:
 </dependencies>
 ```
 
-The repository is hostet by [JitPack](https://jitpack.io/#cryptic-game/java-lib).
+The repository is hosted by [JitPack](https://jitpack.io/#cryptic-game/java-lib).
 
 ## Test it!
 
-Your microservice will be supportet by the [game-server of cryptic](https://github.com/cryptic-game/server).  
+Your microservice will be supported by the [game-server of cryptic](https://github.com/cryptic-game/server).  
 
 ### Environment variables
 
