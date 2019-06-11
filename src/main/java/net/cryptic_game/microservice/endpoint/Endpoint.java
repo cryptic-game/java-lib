@@ -1,5 +1,6 @@
 package net.cryptic_game.microservice.endpoint;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 import org.json.simple.JSONObject;
@@ -7,6 +8,16 @@ import org.json.simple.JSONObject;
 public abstract class Endpoint {
 	
 	private HashMap<String, Class<?>> required = new HashMap<String, Class<?>>();
+	private String[] path;
+	
+	public Endpoint(String[] path, HashMap<String, Class<?>> required) {
+		this.path = path;
+		this.required = required;
+	}
+	
+	public Endpoint(String[] path) {
+		this(path, new HashMap<String, Class<?>>());
+	}
 	
 	public boolean checkData(JSONObject obj) {
 		for(String key : required.keySet()) {
@@ -17,10 +28,16 @@ public abstract class Endpoint {
 		return true;
 	}
 	
-	public abstract HashMap<String, Class<?>> updateRequired();
+	public String[] getPath() {
+		return path;
+	}
 	
 	public void setRequired(HashMap<String, Class<?>> required) {
 		this.required = required;
+	}
+	
+	public String toString() {
+		return Arrays.deepToString(this.getPath());
 	}
 
 }

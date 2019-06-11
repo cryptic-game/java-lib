@@ -9,31 +9,34 @@ import org.json.simple.JSONObject;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
 
 public class EchoMicroService extends MicroService {
+	
+	public static HashMap<String, Class<?>> required = new HashMap<String, Class<?>>();
+	
+	static {
+		HashMap<String, Class<?>> map = new HashMap<String, Class<?>>();
+
+		map.put("message", String.class);
+
+		required = map;
+	}
 
 	public EchoMicroService() {
 		super("echo");
-
-		addUserEndpoint(new UserEndpoint() {
+		
+		addUserEndpoint(new UserEndpoint(required, "echo") {
 
 			@Override
 			public JSONObject execute(JSONObject data, UUID user) {
 				Echo echo = Echo.create((String) data.get("message"));
 				
-				System.out.println(echo);
+				System.out.println(echo); // just to show the result
 				
-				return null; // empty json object
+				return data;
 			}
 
-			@Override
-			public HashMap<String, Class<?>> updateRequired() {
-				HashMap<String, Class<?>> map = new HashMap<String, Class<?>>();
-
-				map.put("message", String.class);
-
-				return map;
-			}
-
-		}, "echo");
+		});
+		
+		start();
 	}
 
 	public static void main(String[] args) {

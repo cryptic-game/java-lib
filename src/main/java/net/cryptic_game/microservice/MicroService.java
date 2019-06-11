@@ -1,7 +1,9 @@
 package net.cryptic_game.microservice;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,22 +33,21 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 	private static final boolean EPOLL = Epoll.isAvailable();
 
-	private static HashMap<String[], UserEndpoint> userEndpoints = new HashMap<String[], UserEndpoint>();
-	private static HashMap<String[], MicroserviceEndpoint> microserviceEndpoints = new HashMap<String[], MicroserviceEndpoint>();
+	private List<UserEndpoint> userEndpoints = new ArrayList<UserEndpoint>();
+	private List<MicroserviceEndpoint> microserviceEndpoints = new ArrayList<MicroserviceEndpoint>();
 
 	private String name;
 	private Channel channel;
 
 	public MicroService(String name) {
 		this.name = name;
-		this.register();
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	private void register() {
+	public void start() {
 		EventLoopGroup group = EPOLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
 
 		try {
@@ -104,12 +105,18 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		}
 	}
 
-	public static JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
-		if (userEndpoints.containsKey(endpoint)) {
-			UserEndpoint userEndpoint = userEndpoints.get(endpoint);
+	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
+		UserEndpoint userEndpoint = null;
 
+		for (UserEndpoint e : userEndpoints) {
+			if (Arrays.deepEquals(e.getPath(), endpoint)) {
+				userEndpoint = e;
+			}
+		}
+
+		if (userEndpoint != null) {
 			if (userEndpoint.checkData(data)) {
-				JSONObject result = userEndpoints.get(endpoint).execute(data, user);
+				JSONObject result = userEndpoint.execute(data, user);
 
 				if (result == null) {
 					result = new JSONObject(new HashMap<String, String>());
@@ -132,10 +139,16 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		return new JSONObject(jsonMap);
 	}
 
-	public static JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
-		if (microserviceEndpoints.containsKey(endpoint)) {
-			MicroserviceEndpoint microserviceEndpoint = microserviceEndpoints.get(endpoint);
+	public JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
+		MicroserviceEndpoint microserviceEndpoint = null;
 
+		for (MicroserviceEndpoint e : microserviceEndpoints) {
+			if (Arrays.deepEquals(e.getPath(), endpoint)) {
+				microserviceEndpoint = e;
+			}
+		}
+
+		if (microserviceEndpoint != null) {
 			if (microserviceEndpoint.checkData(data)) {
 				JSONObject result = microserviceEndpoint.execute(data, ms);
 
@@ -148,7 +161,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 				Map<String, String> jsonMap = new HashMap<String, String>();
 
 				jsonMap.put("error", "invalid input data");
-				
+
 				// maybe sentry here
 
 				return new JSONObject(jsonMap);
@@ -186,19 +199,19 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		this.send(this.channel, new JSONObject(jsonMap));
 	}
 
-	public static void addUserEndpoint(UserEndpoint e, String... endpoint) {
-		if (!userEndpoints.containsKey(endpoint)) {
-			userEndpoints.put(endpoint, e);
+	public void addUserEndpoint(UserEndpoint endpoint) {
+		if (!userEndpoints.contains(endpoint)) {
+			userEndpoints.add(endpoint);
 		} else {
-			throw new IllegalStateException("user endpoint already exists: " + Arrays.toString(endpoint));
+			throw new IllegalStateException("user endpoint already exists: " + endpoint);
 		}
 	}
 
-	public static void addMicroserviceEndpoint(MicroserviceEndpoint e, String... endpoint) {
-		if (!microserviceEndpoints.containsKey(endpoint)) {
-			microserviceEndpoints.put(endpoint, e);
+	public void addMicroserviceEndpoint(MicroserviceEndpoint endpoint) {
+		if (!microserviceEndpoints.contains(endpoint)) {
+			microserviceEndpoints.add(endpoint);
 		} else {
-			throw new IllegalStateException("user endpoint already exists: " + Arrays.toString(endpoint));
+			throw new IllegalStateException("user endpoint already exists: " + endpoint);
 		}
 	}
 

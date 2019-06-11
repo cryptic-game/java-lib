@@ -34,11 +34,12 @@ public class SQLiteDatabase extends Database {
 	}
 	
 	public SQLiteDatabase() {
-		this.name = Config.get(DefaultConfig.STORAGE_LOCATION);
+		this("data.db");
 	}
 
 	@Override
 	public Connection createConnection() throws SQLException {
+		System.out.println(this.name);
 		return DriverManager.getConnection("jdbc:sqlite:" + Config.get(DefaultConfig.STORAGE_LOCATION) + name,
 				properties);
 	}
