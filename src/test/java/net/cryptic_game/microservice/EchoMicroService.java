@@ -1,31 +1,48 @@
 package net.cryptic_game.microservice;
 
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.UUID;
 
+import org.apache.log4j.BasicConfigurator;
 import org.json.simple.JSONObject;
 
+import net.cryptic_game.microservice.endpoint.UserEndpoint;
+
 public class EchoMicroService extends MicroService {
+	
+	public static HashMap<String, Class<?>> required = new HashMap<String, Class<?>>();
+	
+	static {
+		HashMap<String, Class<?>> map = new HashMap<String, Class<?>>();
+
+		map.put("message", String.class);
+
+		required = map;
+	}
 
 	public EchoMicroService() {
 		super("echo");
+		
+		addUserEndpoint(new UserEndpoint(required, "echo") {
+
+			@Override
+			public JSONObject execute(JSONObject data, UUID user) {
+				Echo echo = Echo.create((String) data.get("message"));
+				
+				System.out.println(echo); // just to show the result
+				
+				return data;
+			}
+
+		});
+		
+		start();
 	}
 
-	@Override
-	public JSONObject handle(String[] endpoint, final JSONObject data, final UUID user) {
-		System.out.println("endpoint: " + Arrays.toString(endpoint));
-		System.out.println("data: " + data.toString());
-		System.out.println("user: " + user.toString());
-		System.out.println("");
-		
-		return data;
-	}
+	public static void main(String[] args) {
+		BasicConfigurator.configure();
 
-	@Override
-	public JSONObject handleFromMicroService(JSONObject data) {
-		System.out.println("data: " + data.toString());
-		
-		return data;
+		new EchoMicroService();
 	}
 
 }
