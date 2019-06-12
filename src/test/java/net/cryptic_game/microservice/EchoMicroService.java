@@ -41,7 +41,7 @@ public class EchoMicroService extends MicroService {
 
 	public static void main(String[] args) {
 		BasicConfigurator.configure();
-
+		
 		new EchoMicroService();
 	}
 
