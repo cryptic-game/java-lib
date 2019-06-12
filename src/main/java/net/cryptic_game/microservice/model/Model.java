@@ -19,7 +19,11 @@ public abstract class Model {
 	}
 
 	public void delete() {
-		db.update("DELETE FROM `" + tablename + " WHERE `uuid`=?", this.getUUID().toString());
+		db.update("DELETE FROM `" + tablename + "` WHERE `uuid`=?", this.getUUID().toString());
+	}
+
+	public String toString() {
+		return tablename + " > " + uuid.toString();
 	}
 
 }

@@ -10,13 +10,13 @@ import net.cryptic_game.microservice.model.Model;
 public class Echo extends Model {
 
 	static {
-		Database.getDatabase().update("CREATE TABLE IF NOT EXISTS `echo` (" + "uuid VARCHAR(36), "
-				+ "message VARCHAR(255), " + "PRIMARY KEY(uuid));");
+		Database.getDatabase().update("CREATE TABLE IF NOT EXISTS `echo` (uuid VARCHAR(36), "
+				+ "message VARCHAR(255), PRIMARY KEY(uuid));");
 	}
 
 	private String message;
 
-	public Echo(UUID uuid, String message) {
+	private Echo(UUID uuid, String message) {
 		super("echo");
 		this.uuid = uuid;
 		this.message = message;
