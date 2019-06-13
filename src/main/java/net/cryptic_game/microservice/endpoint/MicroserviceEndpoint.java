@@ -1,19 +1,13 @@
 package net.cryptic_game.microservice.endpoint;
 
-import java.util.HashMap;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-import org.json.simple.JSONObject;
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MicroserviceEndpoint {
 
-public abstract class MicroserviceEndpoint extends Endpoint {
-	
-	public MicroserviceEndpoint(HashMap<String, Class<?>> required, String... path) {
-		super(path, required);
-	}
-	
-	public MicroserviceEndpoint(String... path) {
-		super(path);
-	}
-
-	public abstract JSONObject execute(JSONObject data, String ms);
+	String[] path();
+	String[] keys();
+	Class<?>[] types();
 	
 }

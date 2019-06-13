@@ -17,7 +17,7 @@ public abstract class Database {
     private static final Logger logger = Logger.getLogger(Database.class);
     private static Database database;
     
-    Database() {
+    protected Database() {
         try {
 			this.connection = this.createConnection();
 		} catch (SQLException e) {
@@ -90,7 +90,7 @@ public abstract class Database {
     	if(Config.getBoolean(DefaultConfig.PRODUCTIVE)) {
     		return new MySQLDatabase();
     	} else {
-    		return new SQLiteDatabase();
+    		return new SQLiteDatabase("data.db");
     	}
     }
     
