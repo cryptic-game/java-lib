@@ -1,16 +1,21 @@
 package net.cryptic_game.microservice;
 
-import java.util.ArrayList;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.reflections.Reflections;
+import org.reflections.scanners.MethodAnnotationsScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -33,21 +38,20 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 	private static final boolean EPOLL = Epoll.isAvailable();
 
-	private List<UserEndpoint> userEndpoints = new ArrayList<UserEndpoint>();
-	private List<MicroserviceEndpoint> microserviceEndpoints = new ArrayList<MicroserviceEndpoint>();
-
 	private String name;
 	private Channel channel;
 
 	public MicroService(String name) {
 		this.name = name;
+		
+		this.start();
 	}
 
 	public String getName() {
 		return name;
 	}
 
-	public void start() {
+	private void start() {
 		EventLoopGroup group = EPOLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
 
 		try {
@@ -106,23 +110,38 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	}
 
 	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
-		UserEndpoint userEndpoint = null;
+		UserEndpoint e = null;
+		Method eMethod = null;
 
-		for (UserEndpoint e : userEndpoints) {
-			if (Arrays.deepEquals(e.getPath(), endpoint)) {
-				userEndpoint = e;
+		Reflections reflections = new Reflections(new ConfigurationBuilder()
+				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
+		Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
+		for (Method method : methods) {
+			UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
+
+			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
+				e = methodEndpoint;
+				eMethod = method;
 			}
 		}
 
-		if (userEndpoint != null) {
-			if (userEndpoint.checkData(data)) {
-				JSONObject result = userEndpoint.execute(data, user);
+		if (e != null && eMethod != null) {
+			if (checkData(e.keys(), e.types(), data)) {
+				try {
+					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, user);
 
-				if (result == null) {
-					result = new JSONObject(new HashMap<String, String>());
+					if (result == null) {
+						result = new JSONObject(new HashMap<String, String>());
+					}
+
+					return result;
+				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+					Map<String, String> jsonMap = new HashMap<String, String>();
+
+					jsonMap.put("error", "internal error");
+
+					return new JSONObject(jsonMap);
 				}
-
-				return result;
 			} else {
 				Map<String, String> jsonMap = new HashMap<String, String>();
 
@@ -140,29 +159,42 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	}
 
 	public JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
-		MicroserviceEndpoint microserviceEndpoint = null;
+		MicroserviceEndpoint e = null;
+		Method eMethod = null;
 
-		for (MicroserviceEndpoint e : microserviceEndpoints) {
-			if (Arrays.deepEquals(e.getPath(), endpoint)) {
-				microserviceEndpoint = e;
+		Reflections reflections = new Reflections(new ConfigurationBuilder()
+				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
+		Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroserviceEndpoint.class);
+		for (Method method : methods) {
+			MicroserviceEndpoint methodEndpoint = method.getAnnotation(MicroserviceEndpoint.class);
+
+			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
+				e = methodEndpoint;
+				eMethod = method;
 			}
 		}
 
-		if (microserviceEndpoint != null) {
-			if (microserviceEndpoint.checkData(data)) {
-				JSONObject result = microserviceEndpoint.execute(data, ms);
+		if (e != null && eMethod != null) {
+			if (checkData(e.keys(), e.types(), data)) {
+				try {
+					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, ms);
 
-				if (result == null) {
-					result = new JSONObject(new HashMap<String, String>());
+					if (result == null) {
+						result = new JSONObject(new HashMap<String, String>());
+					}
+
+					return result;
+				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+					Map<String, String> jsonMap = new HashMap<String, String>();
+
+					jsonMap.put("error", "internal error");
+
+					return new JSONObject(jsonMap);
 				}
-
-				return result;
 			} else {
 				Map<String, String> jsonMap = new HashMap<String, String>();
 
 				jsonMap.put("error", "invalid input data");
-
-				// maybe sentry here
 
 				return new JSONObject(jsonMap);
 			}
@@ -199,20 +231,17 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		this.send(this.channel, new JSONObject(jsonMap));
 	}
 
-	public void addUserEndpoint(UserEndpoint endpoint) {
-		if (!userEndpoints.contains(endpoint)) {
-			userEndpoints.add(endpoint);
-		} else {
-			throw new IllegalStateException("user endpoint already exists: " + endpoint);
-		}
-	}
+	private static boolean checkData(String[] keys, Class<?>[] types, JSONObject obj) {
+		for (int i = 0; i < keys.length; i++) {
+			String key = keys[i];
+			Class<?> type = types[i];
 
-	public void addMicroserviceEndpoint(MicroserviceEndpoint endpoint) {
-		if (!microserviceEndpoints.contains(endpoint)) {
-			microserviceEndpoints.add(endpoint);
-		} else {
-			throw new IllegalStateException("user endpoint already exists: " + endpoint);
+			if (!obj.containsKey(key) || obj.get(key).getClass() != type) {
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 }

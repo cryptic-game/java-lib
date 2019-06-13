@@ -32,10 +32,6 @@ public class SQLiteDatabase extends Database {
 	public SQLiteDatabase(String name) {
 		this.name = name;
 	}
-	
-	public SQLiteDatabase() {
-		this("data.db");
-	}
 
 	@Override
 	public Connection createConnection() throws SQLException {
