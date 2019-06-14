@@ -14,13 +14,6 @@ public class EchoEndpoint {
 	public static JSONObject echo(JSONObject data, UUID user) {
 		Echo.create((String) data.get("message"));
 
-		Map<String, Object> jsonMap = new HashMap<String, Object>();
-
-		jsonMap.put("device_uuid", UUID.randomUUID().toString());
-
-		System.out.println(
-				MicroService.instance.contactMicroservice("device", new String[] { "exist" }, new JSONObject(jsonMap)));
-
 		return data;
 	}
 
