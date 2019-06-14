@@ -36,8 +36,12 @@ import net.cryptic_game.microservice.endpoint.UserEndpoint;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
-	public static MicroService instance = null;
+	private static MicroService instance = null;
 
+	public static MicroService getInstance() {
+		return instance;
+	}
+	
 	private static final boolean EPOLL = Epoll.isAvailable();
 
 	private Map<UUID, JSONObject> inter = new HashMap<UUID, JSONObject>();
