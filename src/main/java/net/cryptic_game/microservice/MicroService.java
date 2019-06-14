@@ -36,14 +36,20 @@ import net.cryptic_game.microservice.endpoint.UserEndpoint;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
+	public static MicroService instance = null;
+
 	private static final boolean EPOLL = Epoll.isAvailable();
+
+	private Map<UUID, JSONObject> inter = new HashMap<UUID, JSONObject>();
 
 	private String name;
 	private Channel channel;
 
 	public MicroService(String name) {
 		this.name = name;
-		
+
+		instance = this;
+
 		this.start();
 	}
 
@@ -77,36 +83,53 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	}
 
 	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, String msg) throws ParseException {
-		JSONObject obj = (JSONObject) new JSONParser().parse(msg);
+	protected void channelRead0(ChannelHandlerContext ctx, String msg) {
+		final MicroService m = this;
 
-		if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
-				&& obj.get("data") instanceof JSONObject) {
-			JSONObject data = (JSONObject) obj.get("data");
-			UUID tag = UUID.fromString((String) obj.get("tag"));
+		new Thread(new Runnable() {
 
-			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray) {
-				Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
-				String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
+			@Override
+			public void run() {
+				JSONObject obj = new JSONObject();
+				try {
+					obj = (JSONObject) new JSONParser().parse(msg);
+				} catch (ParseException e) {
+				}
 
-				if (obj.containsKey("user") && obj.get("user") instanceof String) {
-					UUID user = UUID.fromString((String) obj.get("user"));
+				if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
+						&& obj.get("data") instanceof JSONObject) {
+					JSONObject data = (JSONObject) obj.get("data");
 
-					JSONObject responseData = handle(endpoint, data, user);
+					UUID tag = UUID.fromString((String) obj.get("tag"));
 
-					Map<String, Object> response = new HashMap<String, Object>();
+					if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray) {
+						Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
+						String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
 
-					response.put("tag", tag.toString());
-					response.put("data", responseData);
+						if (obj.containsKey("user") && obj.get("user") instanceof String) {
+							UUID user = UUID.fromString((String) obj.get("user"));
 
-					this.send(ctx.channel(), new JSONObject(response));
-				} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
-					String ms = (String) obj.get("ms");
+							JSONObject responseData = handle(endpoint, data, user);
 
-					this.sendToMicroService(ms, handleFromMicroService(endpoint, data, ms), tag);
+							Map<String, Object> response = new HashMap<String, Object>();
+
+							response.put("tag", tag.toString());
+							response.put("data", responseData);
+
+							m.send(ctx.channel(), new JSONObject(response));
+						} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
+							String ms = (String) obj.get("ms");
+
+							if (!m.inter.containsKey(tag)) {
+								m.sendToMicroService(ms, handleFromMicroService(endpoint, data, ms), tag);
+							} else {
+								m.inter.replace(tag, data);
+							}
+						}
+					}
 				}
 			}
-		}
+		}).start();
 	}
 
 	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
@@ -242,6 +265,39 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		}
 
 		return true;
+	}
+
+	public JSONObject contactMicroservice(String ms, String[] endpoint, JSONObject data) {
+		UUID tag = UUID.randomUUID();
+
+		Map<String, Object> jsonMap = new HashMap<String, Object>();
+
+		jsonMap.put("ms", ms);
+		jsonMap.put("data", data);
+		jsonMap.put("endpoint", Arrays.asList(endpoint));
+		jsonMap.put("tag", tag.toString());
+
+		this.send(channel, new JSONObject(jsonMap));
+
+		this.inter.put(tag, null);
+
+		int counter = 0;
+
+		while (this.inter.get(tag) == null) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			counter++;
+
+			if (counter > 100 * 30) {
+				return null;
+			}
+		}
+
+		return this.inter.remove(tag);
 	}
 
 }
