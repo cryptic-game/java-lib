@@ -15,8 +15,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -54,7 +52,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	private String name;
 	private Channel channel;
 
-	public MicroService(String name) {
+	public MicroService(String name) {		
 		this.name = name;
 
 		instance = this;
@@ -93,8 +91,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	}
 
 	private void init() {
-		Reflections reflections = new Reflections(new ConfigurationBuilder()
-				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
+		Reflections reflections = new Reflections("net.cryptic_game.microservice", new MethodAnnotationsScanner());
 		{
 			Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
 			for (Method method : methods) {
