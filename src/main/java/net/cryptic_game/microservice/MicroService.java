@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -33,6 +34,7 @@ import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
 import net.cryptic_game.microservice.endpoint.MicroserviceEndpoint;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
+import net.cryptic_game.microservice.utils.Tuple;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
@@ -41,10 +43,13 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 	public static MicroService getInstance() {
 		return instance;
 	}
-	
+
 	private static final boolean EPOLL = Epoll.isAvailable();
 
 	private Map<UUID, JSONObject> inter = new HashMap<UUID, JSONObject>();
+
+	private Map<List<String>, Tuple<UserEndpoint, Method>> userEndpoints = new HashMap<List<String>, Tuple<UserEndpoint, Method>>();
+	private Map<List<String>, Tuple<MicroserviceEndpoint, Method>> microserviceEndpoints = new HashMap<List<String>, Tuple<MicroserviceEndpoint, Method>>();
 
 	private String name;
 	private Channel channel;
@@ -54,6 +59,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
 		instance = this;
 
+		this.init();
 		this.start();
 	}
 
@@ -83,6 +89,29 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 			channel.closeFuture().syncUninterruptibly();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void init() {
+		Reflections reflections = new Reflections(new ConfigurationBuilder()
+				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
+		{
+			Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
+			for (Method method : methods) {
+				UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
+
+				userEndpoints.put(Arrays.asList(methodEndpoint.path()),
+						new Tuple<UserEndpoint, Method>(methodEndpoint, method));
+			}
+		}
+		{
+			Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroserviceEndpoint.class);
+			for (Method method : methods) {
+				MicroserviceEndpoint methodEndpoint = method.getAnnotation(MicroserviceEndpoint.class);
+
+				microserviceEndpoints.put(Arrays.asList(methodEndpoint.path()),
+						new Tuple<MicroserviceEndpoint, Method>(methodEndpoint, method));
+			}
 		}
 	}
 
@@ -136,23 +165,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		}).start();
 	}
 
-	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
-		UserEndpoint e = null;
-		Method eMethod = null;
+	public JSONObject handle(String[] endpointArray, JSONObject data, UUID user) {
+		List<String> endpoint = Arrays.asList(endpointArray);
 
-		Reflections reflections = new Reflections(new ConfigurationBuilder()
-				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
-		Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
-		for (Method method : methods) {
-			UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
+		if (userEndpoints.containsKey(endpoint)) {
+			Tuple<UserEndpoint, Method> tuple = userEndpoints.get(endpoint);
 
-			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
-				e = methodEndpoint;
-				eMethod = method;
-			}
-		}
-
-		if (e != null && eMethod != null) {
+			UserEndpoint e = tuple.getA();
+			Method eMethod = tuple.getB();
 			if (checkData(e.keys(), e.types(), data)) {
 				try {
 					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, user);
@@ -185,23 +205,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 		return new JSONObject(jsonMap);
 	}
 
-	public JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
-		MicroserviceEndpoint e = null;
-		Method eMethod = null;
+	public JSONObject handleFromMicroService(String[] endpointArray, JSONObject data, String ms) {
+		List<String> endpoint = Arrays.asList(endpointArray);
 
-		Reflections reflections = new Reflections(new ConfigurationBuilder()
-				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
-		Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroserviceEndpoint.class);
-		for (Method method : methods) {
-			MicroserviceEndpoint methodEndpoint = method.getAnnotation(MicroserviceEndpoint.class);
+		if (microserviceEndpoints.containsKey(endpoint)) {
+			Tuple<MicroserviceEndpoint, Method> tuple = microserviceEndpoints.get(endpoint);
 
-			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
-				e = methodEndpoint;
-				eMethod = method;
-			}
-		}
-
-		if (e != null && eMethod != null) {
+			MicroserviceEndpoint e = tuple.getA();
+			Method eMethod = tuple.getB();
 			if (checkData(e.keys(), e.types(), data)) {
 				try {
 					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, ms);

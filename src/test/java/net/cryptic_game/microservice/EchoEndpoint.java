@@ -1,7 +1,5 @@
 package net.cryptic_game.microservice;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import org.json.simple.JSONObject;
