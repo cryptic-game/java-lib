@@ -4,18 +4,18 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import net.cryptic_game.microservice.utils.JSONUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -33,215 +33,220 @@ import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
 import net.cryptic_game.microservice.endpoint.MicroserviceEndpoint;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
+import net.cryptic_game.microservice.utils.Tuple;
 
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
-	private static final boolean EPOLL = Epoll.isAvailable();
+    private static final boolean EPOLL = Epoll.isAvailable();
 
-	private String name;
-	private Channel channel;
+    private Map<UUID, JSONObject> inter = new HashMap<UUID, JSONObject>();
 
-	public MicroService(String name) {
-		this.name = name;
-		
-		this.start();
-	}
+    private Map<List<String>, Tuple<UserEndpoint, Method>> userEndpoints = new HashMap<>();
+    private Map<List<String>, Tuple<MicroserviceEndpoint, Method>> microserviceEndpoints = new HashMap<>();
 
-	public String getName() {
-		return name;
-	}
+    private String name;
+    private Channel channel;
 
-	private void start() {
-		EventLoopGroup group = EPOLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
+    public MicroService(String name) {
+        this.name = name;
 
-		try {
-			Map<String, String> test = new HashMap<String, String>();
+        this.init();
+        this.start();
+    }
 
-			test.put("action", "register");
-			test.put("name", this.getName());
+    public String getName() {
+        return name;
+    }
 
-			Channel channel = new Bootstrap().group(group)
-					.channel(EPOLL ? EpollSocketChannel.class : NioSocketChannel.class)
-					.handler(new MicroServiceInitializer(this))
-					.connect(Config.get(DefaultConfig.MSSOCKET_HOST), Config.getInteger(DefaultConfig.MSSOCKET_PORT))
-					.sync().channel();
+    private void start() {
+        EventLoopGroup group = EPOLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
 
-			this.channel = channel;
+        try {
+            JSONObject registration = JSONUtils.json().add("action", "register").add("name", this.getName()).build();
 
-			channel.writeAndFlush(new JSONObject(test).toString());
+            Channel channel = new Bootstrap().group(group)
+                    .channel(EPOLL ? EpollSocketChannel.class : NioSocketChannel.class)
+                    .handler(new MicroServiceInitializer(this))
+                    .connect(Config.get(DefaultConfig.MSSOCKET_HOST), Config.getInteger(DefaultConfig.MSSOCKET_PORT))
+                    .sync().channel();
 
-			channel.closeFuture().syncUninterruptibly();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
+            this.channel = channel;
 
-	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, String msg) throws ParseException {
-		JSONObject obj = (JSONObject) new JSONParser().parse(msg);
+            channel.writeAndFlush(registration.toString());
 
-		if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
-				&& obj.get("data") instanceof JSONObject) {
-			JSONObject data = (JSONObject) obj.get("data");
-			UUID tag = UUID.fromString((String) obj.get("tag"));
+            channel.closeFuture().syncUninterruptibly();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
-			if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray) {
-				Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
-				String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
+    private void init() {
+        Reflections reflections = new Reflections("net.cryptic_game.microservice", new MethodAnnotationsScanner());
+        {
+            Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
+            for (Method method : methods) {
+                UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
 
-				if (obj.containsKey("user") && obj.get("user") instanceof String) {
-					UUID user = UUID.fromString((String) obj.get("user"));
+                userEndpoints.put(Arrays.asList(methodEndpoint.path()),
+                        new Tuple<>(methodEndpoint, method));
+            }
+        }
+        {
+            Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroserviceEndpoint.class);
+            for (Method method : methods) {
+                MicroserviceEndpoint methodEndpoint = method.getAnnotation(MicroserviceEndpoint.class);
 
-					JSONObject responseData = handle(endpoint, data, user);
+                microserviceEndpoints.put(Arrays.asList(methodEndpoint.path()),
+                        new Tuple<>(methodEndpoint, method));
+            }
+        }
+    }
 
-					Map<String, Object> response = new HashMap<String, Object>();
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) {
+        new Thread(() -> {
 
-					response.put("tag", tag.toString());
-					response.put("data", responseData);
+            JSONObject obj = new JSONObject();
+            try {
+                obj = (JSONObject) new JSONParser().parse(msg);
+            } catch (ParseException e) {
+            }
 
-					this.send(ctx.channel(), new JSONObject(response));
-				} else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
-					String ms = (String) obj.get("ms");
+            if (obj.containsKey("tag") && obj.get("tag") instanceof String && obj.containsKey("data")
+                    && obj.get("data") instanceof JSONObject) {
+                JSONObject data = (JSONObject) obj.get("data");
 
-					this.sendToMicroService(ms, handleFromMicroService(endpoint, data, ms), tag);
-				}
-			}
-		}
-	}
+                UUID tag = UUID.fromString((String) obj.get("tag"));
 
-	public JSONObject handle(String[] endpoint, JSONObject data, UUID user) {
-		UserEndpoint e = null;
-		Method eMethod = null;
+                if (obj.containsKey("endpoint") && obj.get("endpoint") instanceof JSONArray) {
+                    Object[] endpointArr = ((JSONArray) obj.get("endpoint")).toArray();
+                    String[] endpoint = Arrays.copyOf(endpointArr, endpointArr.length, String[].class);
 
-		Reflections reflections = new Reflections(new ConfigurationBuilder()
-				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
-		Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
-		for (Method method : methods) {
-			UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
+                    if (obj.containsKey("user") && obj.get("user") instanceof String) {
+                        UUID user = UUID.fromString((String) obj.get("user"));
 
-			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
-				e = methodEndpoint;
-				eMethod = method;
-			}
-		}
+                        JSONObject responseData = handle(endpoint, data, user);
 
-		if (e != null && eMethod != null) {
-			if (checkData(e.keys(), e.types(), data)) {
-				try {
-					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, user);
+                       this.send(ctx.channel(), JSONUtils.json().add("tag", tag.toString()).add("data", responseData).build());
+                    } else if (obj.containsKey("ms") && obj.get("ms") instanceof String) {
+                        String ms = (String) obj.get("ms");
 
-					if (result == null) {
-						result = new JSONObject(new HashMap<String, String>());
-					}
+                        if (!this.inter.containsKey(tag)) {
+                            this.sendToMicroService(ms, handleFromMicroService(endpoint, data, ms), tag);
+                        } else {
+                            this.inter.replace(tag, data);
+                        }
+                    }
+                }
+            }
+        }).start();
+    }
 
-					return result;
-				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
-					Map<String, String> jsonMap = new HashMap<String, String>();
+    public JSONObject handle(String[] endpointArray, JSONObject data, UUID user) {
+        List<String> endpoint = Arrays.asList(endpointArray);
 
-					jsonMap.put("error", "internal error");
+        if (userEndpoints.containsKey(endpoint)) {
+            Tuple<UserEndpoint, Method> tuple = userEndpoints.get(endpoint);
 
-					return new JSONObject(jsonMap);
-				}
-			} else {
-				Map<String, String> jsonMap = new HashMap<String, String>();
+            UserEndpoint e = tuple.getA();
+            Method eMethod = tuple.getB();
+            if (checkData(e.keys(), e.types(), data)) {
+                try {
+                    JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, user);
 
-				jsonMap.put("error", "invalid input data");
+                    if (result == null) {
+                        result = JSONUtils.empty();
+                    }
 
-				return new JSONObject(jsonMap);
-			}
-		}
+                    return result;
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+                    return JSONUtils.error("internal error");
+                }
+            } else {
+                return JSONUtils.error("invalid input  data");
+            }
+        }
 
-		Map<String, String> jsonMap = new HashMap<String, String>();
+        return JSONUtils.error("unknown service");
+    }
 
-		jsonMap.put("error", "unknown service");
+    public JSONObject handleFromMicroService(String[] endpointArray, JSONObject data, String ms) {
+        List<String> endpoint = Arrays.asList(endpointArray);
 
-		return new JSONObject(jsonMap);
-	}
+        if (microserviceEndpoints.containsKey(endpoint)) {
+            Tuple<MicroserviceEndpoint, Method> tuple = microserviceEndpoints.get(endpoint);
 
-	public JSONObject handleFromMicroService(String[] endpoint, JSONObject data, String ms) {
-		MicroserviceEndpoint e = null;
-		Method eMethod = null;
+            MicroserviceEndpoint e = tuple.getA();
+            Method eMethod = tuple.getB();
+            if (checkData(e.keys(), e.types(), data)) {
+                try {
+                    JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, ms);
 
-		Reflections reflections = new Reflections(new ConfigurationBuilder()
-				.setUrls(ClasspathHelper.forPackage("net.cryptic_game")).setScanners(new MethodAnnotationsScanner()));
-		Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroserviceEndpoint.class);
-		for (Method method : methods) {
-			MicroserviceEndpoint methodEndpoint = method.getAnnotation(MicroserviceEndpoint.class);
+                    if (result == null) {
+                        result = JSONUtils.empty();
+                    }
 
-			if (Arrays.deepEquals(methodEndpoint.path(), endpoint)) {
-				e = methodEndpoint;
-				eMethod = method;
-			}
-		}
+                    return result;
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+                    return JSONUtils.error("internal error");
+                }
+            } else {
+                return JSONUtils.error("invalid input  data");
+            }
+        }
+        return JSONUtils.error("unknown service");
+    }
 
-		if (e != null && eMethod != null) {
-			if (checkData(e.keys(), e.types(), data)) {
-				try {
-					JSONObject result = (JSONObject) eMethod.invoke(new Object(), data, ms);
 
-					if (result == null) {
-						result = new JSONObject(new HashMap<String, String>());
-					}
+    private void send(Channel channel, JSONObject obj) {
+        channel.writeAndFlush(Unpooled.copiedBuffer(obj.toString(), CharsetUtil.UTF_8));
+    }
 
-					return result;
-				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
-					Map<String, String> jsonMap = new HashMap<String, String>();
+    public void sendToMicroService(String ms, JSONObject data, UUID tag) {
+        this.send(channel, JSONUtils.json().add("ms", ms).add("data", data).add("tag", tag.toString()).build());
+    }
 
-					jsonMap.put("error", "internal error");
+    public void sendToUser(UUID user, JSONObject data) {
+        this.send(channel, JSONUtils.json().add("action", "address").add("user", user.toString()).add("data", data).build());
+    }
 
-					return new JSONObject(jsonMap);
-				}
-			} else {
-				Map<String, String> jsonMap = new HashMap<String, String>();
+    private static boolean checkData(String[] keys, Class<?>[] types, JSONObject obj) {
+        for (int i = 0; i < keys.length; i++) {
+            String key = keys[i];
+            Class<?> type = types[i];
 
-				jsonMap.put("error", "invalid input data");
+            if (!obj.containsKey(key) || obj.get(key).getClass() != type) {
+                return false;
+            }
+        }
 
-				return new JSONObject(jsonMap);
-			}
-		}
+        return true;
+    }
 
-		Map<String, String> jsonMap = new HashMap<String, String>();
+    public JSONObject contactMicroservice(String ms, String[] endpoint, JSONObject data) {
+        UUID tag = UUID.randomUUID();
 
-		jsonMap.put("error", "unknown service");
+        this.send(channel, JSONUtils.json().add("ms", ms).add("data", data).add("endpoint", Arrays.asList(endpoint)).add("tag", tag.toString()).build());
 
-		return new JSONObject(jsonMap);
-	}
+        this.inter.put(tag, null);
 
-	private void send(Channel channel, JSONObject obj) {
-		channel.writeAndFlush(Unpooled.copiedBuffer(obj.toString(), CharsetUtil.UTF_8));
-	}
+        int counter = 0;
 
-	public void sendToMicroService(String ms, JSONObject data, UUID tag) {
-		Map<String, Object> jsonMap = new HashMap<String, Object>();
+        while (this.inter.get(tag) == null) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
-		jsonMap.put("ms", ms);
-		jsonMap.put("data", data);
-		jsonMap.put("tag", tag.toString());
+            counter++;
 
-		this.send(channel, new JSONObject(jsonMap));
-	}
+            if (counter > 100 * 30) {
+                return null;
+            }
+        }
 
-	public void sendToUser(UUID user, JSONObject data) {
-		Map<String, Object> jsonMap = new HashMap<String, Object>();
-
-		jsonMap.put("action", "address");
-		jsonMap.put("user", user.toString());
-		jsonMap.put("data", data);
-
-		this.send(this.channel, new JSONObject(jsonMap));
-	}
-
-	private static boolean checkData(String[] keys, Class<?>[] types, JSONObject obj) {
-		for (int i = 0; i < keys.length; i++) {
-			String key = keys[i];
-			Class<?> type = types[i];
-
-			if (!obj.containsKey(key) || obj.get(key).getClass() != type) {
-				return false;
-			}
-		}
-
-		return true;
-	}
+        return this.inter.remove(tag);
+    }
 
 }

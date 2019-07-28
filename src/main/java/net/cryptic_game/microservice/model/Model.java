@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import net.cryptic_game.microservice.db.Database;
 
-public abstract class Model {
+public class Model {
 
 	protected static Database db = Database.getDatabase();
 	protected UUID uuid;
