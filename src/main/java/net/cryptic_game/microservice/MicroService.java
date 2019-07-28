@@ -39,6 +39,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
     private static final boolean EPOLL = Epoll.isAvailable();
 
+    private static MicroService instance;
+
     private Map<UUID, JSONObject> inter = new HashMap<UUID, JSONObject>();
 
     private Map<List<String>, Tuple<UserEndpoint, Method>> userEndpoints = new HashMap<>();
@@ -47,8 +49,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
     private String name;
     private Channel channel;
 
+    public static MicroService getInstance() {
+        return instance;
+    }
+
     public MicroService(String name) {
         this.name = name;
+
+        instance = this;
 
         this.init();
         this.start();
