@@ -17,5 +17,4 @@ public class Tuple<A,B> {
     public B getB() {
         return b;
     }
-
 }
