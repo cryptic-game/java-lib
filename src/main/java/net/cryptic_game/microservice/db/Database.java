@@ -1,104 +1,80 @@
 package net.cryptic_game.microservice.db;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import org.apache.log4j.Logger;
-
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.Configuration;
+import org.hibernate.cfg.Environment;
+import org.hibernate.service.ServiceRegistry;
+import org.reflections.Reflections;
 
-public abstract class Database {
+import javax.persistence.Entity;
+import java.util.Calendar;
+import java.util.Properties;
+import java.util.Set;
 
-    private Connection connection;
+public class Database {
 
-    private static final Logger logger = Logger.getLogger(Database.class);
-    private static Database database;
-    
-    protected Database() {
-        try {
-			this.connection = this.createConnection();
-		} catch (SQLException e) {
+	private static Database instance;
+
+	private SessionFactory sessionFactory;
+
+	public Database() {
+		instance = this;
+
+		try {
+			Configuration cfg = getConfiguration();
+			ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
+					.applySettings(cfg.getProperties()).build();
+
+			sessionFactory = cfg.buildSessionFactory(serviceRegistry);
+
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-    }
-    
-    public boolean isConnected() {
-    	try {
-			return this.connection != null && !this.connection.isClosed();
-		} catch (SQLException e) {
-			return false;
+	}
+
+	public SessionFactory getSessionFactory() {
+		return sessionFactory;
+	}
+
+	public Session openSession() {
+		return sessionFactory.openSession();
+	}
+
+	private Configuration getConfiguration() {
+		Configuration configuration = new Configuration();
+
+		Properties settings = new Properties();
+
+		settings.put(Environment.DRIVER, "com.mysql.cj.jdbc.Driver");
+		settings.put(Environment.URL, "jdbc:mysql://" + Config.get(DefaultConfig.MYSQL_HOSTNAME) + ":" + Config.get(DefaultConfig.MYSQL_PORT)
+				+ "/" + Config.get(DefaultConfig.MYSQL_DATABASE) + "?serverTimezone=" + Calendar.getInstance().getTimeZone().getID());
+		settings.put(Environment.USER, Config.get(DefaultConfig.MYSQL_USERNAME));
+		settings.put(Environment.PASS, Config.get(DefaultConfig.MYSQL_PASSWORD));
+		settings.put(Environment.DIALECT, "org.hibernate.dialect.MySQL5Dialect");
+		settings.put(Environment.SHOW_SQL, "true");
+		settings.put(Environment.HBM2DDL_AUTO, "update");
+
+		configuration.setProperties(settings);
+
+		addEntityClassesFromPackage("net.cryptic_game.microservice", configuration);
+
+		return configuration;
+	}
+
+	private void addEntityClassesFromPackage(String pkg, Configuration cfg) {
+		Reflections reflections = new Reflections(pkg);
+		Set<Class<?>> annotated = reflections.getTypesAnnotatedWith(Entity.class);
+
+		for(Class entities : annotated) {
+			cfg.addAnnotatedClass(entities);
 		}
-    }
-    
-    public void reconnect() {
-    	logger.error("lost connection to database... trying to reconnect");
-    	while(true) {
-	    	try {
-				this.connection = this.createConnection();
-				logger.info("reconnected to database");
-				return;
-			} catch (SQLException e) {
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e1) {
-					e1.printStackTrace();
-				} // 0.5 seconds
-			}
-    	}
-    }
-    
-    public ResultSet getResult(String query, Object... args) {
-    	if(!this.isConnected()) {
-    		this.reconnect();
-    	}
-    	
-        try {
-            PreparedStatement statement;
-            statement = this.connection.prepareStatement(query);
-            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
+	}
 
-            return statement.executeQuery();
-        } catch (Exception e) {
-        	this.reconnect();
-        	return this.getResult(query, args);
-        }
-    }
-
-    public void update(String query, Object... args) {
-    	if(!this.isConnected()) {
-    		this.reconnect();
-    	}
-    	
-        try {
-            PreparedStatement statement;
-            statement = this.connection.prepareStatement(query);
-            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
-
-            statement.executeUpdate();
-        } catch (Exception e) {
-        	this.reconnect();
-        	this.update(query, args);
-        }
-    }
-    
-    protected abstract Connection createConnection() throws SQLException;
-    
-    private static Database createDatabase() {
-    	if(Config.getBoolean(DefaultConfig.PRODUCTIVE)) {
-    		return new MySQLDatabase();
-    	} else {
-    		return new SQLiteDatabase("data.db");
-    	}
-    }
-    
-    public static Database getDatabase() {
-    	if(database == null) {
-    		database = createDatabase();
-    	}
-    	return database;
-    }
-
+	public static Database getInstance() {
+		return instance;
+	}
 }

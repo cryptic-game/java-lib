@@ -3,27 +3,30 @@ package net.cryptic_game.microservice.model;
 import java.util.UUID;
 
 import net.cryptic_game.microservice.db.Database;
+import org.hibernate.Session;
+import org.hibernate.annotations.Type;
 
-public class Model {
+import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
 
-	protected static Database db = Database.getDatabase();
+@MappedSuperclass
+public abstract class Model {
+
+	@Id
+	@Type(type="uuid-char")
 	protected UUID uuid;
-	protected String tablename;
 
 	public UUID getUUID() {
 		return uuid;
 	}
 
-	public Model(String tablename) {
-		this.tablename = tablename;
-	}
-
 	public void delete() {
-		db.update("DELETE FROM `" + tablename + "` WHERE `uuid`=?", this.getUUID().toString());
-	}
+		Session session = Database.getInstance().openSession();
+		session.beginTransaction();
 
-	public String toString() {
-		return tablename + " > " + uuid.toString();
-	}
+		session.delete(this);
 
+		session.getTransaction().commit();
+		session.close();
+	}
 }
