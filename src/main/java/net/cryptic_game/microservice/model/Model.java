@@ -12,21 +12,21 @@ import javax.persistence.MappedSuperclass;
 @MappedSuperclass
 public abstract class Model {
 
-	@Id
-	@Type(type="uuid-char")
-	protected UUID uuid;
+    @Id
+    @Type(type = "uuid-char")
+    protected UUID uuid;
 
-	public UUID getUUID() {
-		return uuid;
-	}
+    public UUID getUUID() {
+        return uuid;
+    }
 
-	public void delete() {
-		Session session = Database.getInstance().openSession();
-		session.beginTransaction();
+    public void delete() {
+        Session session = Database.getInstance().openSession();
+        session.beginTransaction();
 
-		session.delete(this);
+        session.delete(this);
 
-		session.getTransaction().commit();
-		session.close();
-	}
+        session.getTransaction().commit();
+        session.close();
+    }
 }

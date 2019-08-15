@@ -5,9 +5,11 @@ import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UserEndpoint {
-	
-	String[] path();
-	String[] keys();
-	Class<?>[] types();
-	
+
+    String[] path();
+
+    String[] keys();
+
+    Class<?>[] types();
+
 }

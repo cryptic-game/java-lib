@@ -4,10 +4,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MicroserviceEndpoint {
+public @interface MicroServiceEndpoint {
 
-	String[] path();
-	String[] keys();
-	Class<?>[] types();
-	
+    String[] path();
+
+    String[] keys();
+
+    Class<?>[] types();
+
 }

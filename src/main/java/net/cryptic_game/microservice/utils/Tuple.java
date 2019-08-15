@@ -1,6 +1,6 @@
 package net.cryptic_game.microservice.utils;
 
-public class Tuple<A,B> {
+public class Tuple<A, B> {
 
     private A a;
     private B b;
