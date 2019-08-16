@@ -23,6 +23,10 @@ public class User {
         return uuid;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public String getMail() {
         return mail;
     }
