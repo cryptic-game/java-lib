@@ -41,4 +41,7 @@ public class JSON {
         return null;
     }
 
+    public JSONObject getJSONObject() {
+        return obj;
+    }
 }

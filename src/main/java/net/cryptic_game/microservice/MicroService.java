@@ -16,7 +16,6 @@ import net.cryptic_game.microservice.endpoint.MicroServiceEndpoint;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
 import net.cryptic_game.microservice.utils.JSON;
 import net.cryptic_game.microservice.utils.JSONBuilder;
-import net.cryptic_game.microservice.utils.JSONUtils;
 import net.cryptic_game.microservice.utils.Tuple;
 import net.cryptic_game.microservice.wrapper.User;
 import org.json.simple.JSONArray;
@@ -26,7 +25,6 @@ import org.json.simple.parser.ParseException;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -163,7 +161,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             if (checkData(userEndpoint.keys(), userEndpoint.types(), data)) {
                 try {
-                    JSONObject result = (JSONObject) tuple.getB().invoke(new Object(), data, user);
+                    JSONObject result = (JSONObject) tuple.getB().invoke(new Object(), new JSON(data), user);
 
                     if (result == null) {
                         result = new JSONObject();
@@ -189,7 +187,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             if (checkData(microServiceEndpoint.keys(), microServiceEndpoint.types(), data)) {
                 try {
-                    JSONObject result = (JSONObject) tuple.getB().invoke(new Object(), data, ms);
+                    JSONObject result = (JSONObject) tuple.getB().invoke(new Object(), new JSON(data), ms);
 
                     if (result == null) {
                         result = new JSONObject();
