@@ -12,6 +12,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
+import net.cryptic_game.microservice.db.Database;
 import net.cryptic_game.microservice.endpoint.MicroServiceEndpoint;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
 import net.cryptic_game.microservice.utils.JSON;
@@ -23,6 +24,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.reflections.Reflections;
+import org.reflections.ReflectionsException;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
 import java.lang.reflect.InvocationTargetException;
@@ -57,29 +59,35 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         instance = this;
 
+        new Database();
+
         init();
         start();
     }
 
     private void init() {
-        Reflections reflections = new Reflections("net.cryptic_game.microservice", new MethodAnnotationsScanner());
-        {
-            Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
-            for (Method method : methods) {
-                UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
+        try {
+            Reflections reflections = new Reflections("net.cryptic_game.microservice", new MethodAnnotationsScanner());
 
-                userEndpoints.put(Arrays.asList(methodEndpoint.path()),
-                        new Tuple<>(methodEndpoint, method));
-            }
-        }
-        {
-            Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroServiceEndpoint.class);
-            for (Method method : methods) {
-                MicroServiceEndpoint methodEndpoint = method.getAnnotation(MicroServiceEndpoint.class);
+            {
+                Set<Method> methods = reflections.getMethodsAnnotatedWith(UserEndpoint.class);
+                for (Method method : methods) {
+                    UserEndpoint methodEndpoint = method.getAnnotation(UserEndpoint.class);
 
-                microServiceEndpoints.put(Arrays.asList(methodEndpoint.path()),
-                        new Tuple<>(methodEndpoint, method));
+                    userEndpoints.put(Arrays.asList(methodEndpoint.path()),
+                            new Tuple<>(methodEndpoint, method));
+                }
             }
+            {
+                Set<Method> methods = reflections.getMethodsAnnotatedWith(MicroServiceEndpoint.class);
+                for (Method method : methods) {
+                    MicroServiceEndpoint methodEndpoint = method.getAnnotation(MicroServiceEndpoint.class);
+
+                    microServiceEndpoints.put(Arrays.asList(methodEndpoint.path()),
+                            new Tuple<>(methodEndpoint, method));
+                }
+            }
+        } catch (ReflectionsException ignored) {
         }
     }
 
@@ -103,8 +111,11 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
             channel.writeAndFlush(registration.toString());
 
             channel.closeFuture().syncUninterruptibly();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+
+            // reconnect
+            start();
         }
     }
 
