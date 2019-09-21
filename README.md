@@ -1,6 +1,6 @@
-# cryptic-java-lib
+# cryptic-java-lib [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=cryptic-game_java-lib&metric=coverage)](https://sonarcloud.io/dashboard?id=cryptic-game_java-lib)
 
-This is a microservice-libary for java of cryptic-game.
+This is a microservice-library for java of cryptic-game.
 
 ## Quick-Start
 
