@@ -133,6 +133,10 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             JSON json = new JSON(jsonObject);
 
+            if(json.get("error") != null) {
+                return;
+            }
+
             UUID tag = json.getUUID("tag");
             JSONObject data = json.get("data", JSONObject.class);
             JSONArray endpointJSONArray = json.get("endpoint", JSONArray.class);
