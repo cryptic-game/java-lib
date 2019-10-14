@@ -13,7 +13,8 @@ public enum DefaultConfig {
     MYSQL_DATABASE("cryptic"),
     MYSQL_PORT(3306),
     PRODUCTIVE(true),
-    STORAGE_LOCATION("data/");
+    STORAGE_LOCATION("data/"),
+    SENTRY_DSN("");
 
 
     private Object value;
