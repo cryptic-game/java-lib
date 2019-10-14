@@ -10,6 +10,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.sentry.Sentry;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
 import net.cryptic_game.microservice.db.Database;
@@ -58,6 +59,10 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
         this.name = name;
 
         instance = this;
+
+        if(!Config.get(DefaultConfig.SENTRY_DSN).equals("")) {
+            Sentry.init(Config.get(DefaultConfig.SENTRY_DSN));
+        }
 
         new Database();
 
@@ -113,6 +118,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
             channel.closeFuture().syncUninterruptibly();
         } catch (Exception e) {
             e.printStackTrace();
+
+            Sentry.capture(e);
 
             // reconnect
             start();

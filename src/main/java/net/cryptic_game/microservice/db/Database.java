@@ -1,5 +1,6 @@
 package net.cryptic_game.microservice.db;
 
+import io.sentry.Sentry;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
 import org.hibernate.Session;
@@ -33,6 +34,8 @@ public class Database {
 
         } catch (Exception e) {
             e.printStackTrace();
+
+            Sentry.capture(e);
         }
     }
 
