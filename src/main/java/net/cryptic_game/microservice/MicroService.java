@@ -60,7 +60,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         instance = this;
 
-        if(!Config.get(DefaultConfig.SENTRY_DSN).equals("")) {
+        if (!Config.get(DefaultConfig.SENTRY_DSN).equals("")) {
             Sentry.init(Config.get(DefaultConfig.SENTRY_DSN));
         }
 
@@ -121,6 +121,11 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             Sentry.capture(e);
 
+            try {
+                Thread.sleep(10000L);
+            } catch (InterruptedException ignored) {
+            }
+
             // reconnect
             start();
         }
@@ -140,7 +145,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             JSON json = new JSON(jsonObject);
 
-            if(json.get("error") != null) {
+            if (json.get("error") != null) {
                 return;
             }
 
