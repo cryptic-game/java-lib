@@ -123,8 +123,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             try {
                 Thread.sleep(10000L);
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
+            } catch (InterruptedException ignored) {
             }
 
             // reconnect
