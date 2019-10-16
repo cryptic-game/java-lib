@@ -39,4 +39,9 @@ public class User {
         return last;
     }
 
+    @Override
+    public boolean equals(final Object obj) {
+        if (obj instanceof User) return this.uuid.equals(((User) obj).getUUID());
+        else return super.equals(obj);
+    }
 }
