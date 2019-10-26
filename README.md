@@ -35,9 +35,9 @@ The repository is hosted by [JitPack](https://jitpack.io/#cryptic-game/java-lib)
 
 Your microservice will be supported by the [game-server of cryptic](https://github.com/cryptic-game/server).  
 
-### Environment variables
+## Environment variables
 
-| key               | default value |  
+| Key               | Default Value |  
 |-------------------|---------------|  
 | MSSOCKET_HOST     | 127.0.0.1     |  
 | MSSOCKET_PORT     | 1239          |  
