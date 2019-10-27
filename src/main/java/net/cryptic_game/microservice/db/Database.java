@@ -44,7 +44,14 @@ public class Database {
     }
 
     public Session openSession() {
-        return sessionFactory.openSession();
+        Session session = sessionFactory.openSession();
+        try {
+            session.beginTransaction();
+            session.getTransaction().commit();
+        } catch(Exception ignored) {
+        }
+
+        return session;
     }
 
     private Configuration getConfiguration() {
