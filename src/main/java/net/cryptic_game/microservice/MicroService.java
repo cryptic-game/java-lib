@@ -153,8 +153,13 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
             JSONObject data = json.get("data", JSONObject.class);
             JSONArray endpointJSONArray = json.get("endpoint", JSONArray.class);
 
-            if (tag == null || data == null || endpointJSONArray == null) {
+            if (tag == null || data == null) {
                 sendError(channel, MISSING_PARAMETERS);
+                return;
+            }
+
+            if(waitingForResponse.containsKey(tag) && endpointJSONArray == null) {
+                waitingForResponse.replace(tag, data);
                 return;
             }
 
@@ -251,7 +256,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
     public User getUser(UUID user) {
         JSON response = new JSON(waitForResponse(JSONBuilder.anJSON()
-                .add("user", user.toString())
+                .add("action", "user")
+                .add("data", JSONBuilder.anJSON().add("user", user.toString()).build())
                 .build()));
 
         Boolean valid = response.get("valid", Boolean.class);
