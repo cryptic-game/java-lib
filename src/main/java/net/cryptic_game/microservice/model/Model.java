@@ -1,13 +1,12 @@
 package net.cryptic_game.microservice.model;
 
-import java.util.UUID;
-
 import net.cryptic_game.microservice.db.Database;
 import org.hibernate.Session;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
+import java.util.UUID;
 
 @MappedSuperclass
 public abstract class Model {

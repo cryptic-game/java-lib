@@ -51,10 +51,6 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
     private String name;
     private Channel channel;
 
-    public static MicroService getInstance() {
-        return instance;
-    }
-
     public MicroService(String name) {
         this.name = name;
 
@@ -68,6 +64,10 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         init();
         start();
+    }
+
+    public static MicroService getInstance() {
+        return instance;
     }
 
     private void init() {
@@ -158,7 +158,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
                 return;
             }
 
-            if(waitingForResponse.containsKey(tag) && endpointJSONArray == null) {
+            if (waitingForResponse.containsKey(tag) && endpointJSONArray == null) {
                 waitingForResponse.replace(tag, data);
                 return;
             }

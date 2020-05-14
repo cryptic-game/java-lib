@@ -39,6 +39,10 @@ public class Database {
         }
     }
 
+    public static Database getInstance() {
+        return instance;
+    }
+
     public SessionFactory getSessionFactory() {
         return sessionFactory;
     }
@@ -48,7 +52,7 @@ public class Database {
         try {
             session.beginTransaction();
             session.getTransaction().commit();
-        } catch(Exception ignored) {
+        } catch (Exception ignored) {
         }
 
         return session;
@@ -82,9 +86,5 @@ public class Database {
         for (Class entities : annotated) {
             cfg.addAnnotatedClass(entities);
         }
-    }
-
-    public static Database getInstance() {
-        return instance;
     }
 }

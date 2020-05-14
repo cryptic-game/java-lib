@@ -23,10 +23,6 @@ public enum DefaultConfig {
         this.value = value;
     }
 
-    public Object getValue() {
-        return value;
-    }
-
     public static Map<String, String> defaults() {
         Map<String, String> defaults = new HashMap<String, String>();
 
@@ -35,6 +31,10 @@ public enum DefaultConfig {
         }
 
         return defaults;
+    }
+
+    public Object getValue() {
+        return value;
     }
 
 }
