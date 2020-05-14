@@ -268,15 +268,14 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         UUID uuid = response.getUUID("uuid");
         String name = response.get("name");
-        String mail = response.get("mail");
         Long createdTimestamp = response.get("created", Long.class);
         Long lastTimestamp = response.get("last", Long.class);
 
-        if (uuid == null || name == null || mail == null || createdTimestamp == null || lastTimestamp == null) {
+        if (uuid == null || name == null || createdTimestamp == null || lastTimestamp == null) {
             return null;
         }
 
-        return new User(uuid, name, mail, new Date(createdTimestamp), new Date(lastTimestamp));
+        return new User(uuid, name, new Date(createdTimestamp), new Date(lastTimestamp));
     }
 
     public boolean isValidUser(UUID user) {
