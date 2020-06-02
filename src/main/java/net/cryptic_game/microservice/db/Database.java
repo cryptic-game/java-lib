@@ -4,17 +4,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
-import org.apache.log4j.Logger;
-
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class Database {
 
     private Connection connection;
 
-    private static final Logger logger = Logger.getLogger(Database.class);
+    private static final Logger logger = LoggerFactory.getLogger(Database.class);
     private static Database database;
     
     protected Database() {
