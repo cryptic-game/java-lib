@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 
 public class MicroServiceInitializer extends ChannelInitializer<SocketChannel> {
 
-    private SimpleChannelInboundHandler<String> handler;
+    private final SimpleChannelInboundHandler<String> handler;
 
     MicroServiceInitializer(SimpleChannelInboundHandler<String> handler) {
         this.handler = handler;

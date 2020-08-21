@@ -17,7 +17,7 @@ public enum DefaultConfig {
     SENTRY_DSN("");
 
 
-    private Object value;
+    private final Object value;
 
     DefaultConfig(Object value) {
         this.value = value;

@@ -30,9 +30,18 @@ import org.reflections.scanners.MethodAnnotationsScanner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
-import static net.cryptic_game.microservice.error.ServerError.*;
+import static net.cryptic_game.microservice.error.ServerError.INTERNAL_ERROR;
+import static net.cryptic_game.microservice.error.ServerError.MISSING_PARAMETERS;
+import static net.cryptic_game.microservice.error.ServerError.UNKNOWN_SERVICE;
+import static net.cryptic_game.microservice.error.ServerError.UNSUPPORTED_FORMAT;
 import static net.cryptic_game.microservice.utils.JSONUtils.checkData;
 import static net.cryptic_game.microservice.utils.SocketUtils.send;
 import static net.cryptic_game.microservice.utils.SocketUtils.sendError;
@@ -43,12 +52,12 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
     private static MicroService instance;
 
-    private Map<UUID, JSONObject> waitingForResponse = new HashMap<>();
+    private final Map<UUID, JSONObject> waitingForResponse = new HashMap<>();
 
-    private Map<List<String>, Tuple<UserEndpoint, Method>> userEndpoints = new HashMap<>();
-    private Map<List<String>, Tuple<MicroServiceEndpoint, Method>> microServiceEndpoints = new HashMap<>();
+    private final Map<List<String>, Tuple<UserEndpoint, Method>> userEndpoints = new HashMap<>();
+    private final Map<List<String>, Tuple<MicroServiceEndpoint, Method>> microServiceEndpoints = new HashMap<>();
 
-    private String name;
+    private final String name;
     private Channel channel;
 
     public MicroService(String name) {

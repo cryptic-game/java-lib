@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public class JSON {
 
-    private JSONObject obj;
+    private final JSONObject obj;
 
     public JSON(JSONObject obj) {
         this.obj = obj;
@@ -33,7 +33,7 @@ public class JSON {
     public <T> T get(String key, Class<? extends T> type) {
         if (obj.containsKey(key) && type.isInstance(obj.get(key))) {
             try {
-                return (T) type.cast(obj.get(key));
+                return type.cast(obj.get(key));
             } catch (ClassCastException ignored) {
             }
         }

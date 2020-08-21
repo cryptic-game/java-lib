@@ -2,8 +2,8 @@ package net.cryptic_game.microservice.utils;
 
 public class Tuple<A, B> {
 
-    private A a;
-    private B b;
+    private final A a;
+    private final B b;
 
     public Tuple(A a, B b) {
         this.a = a;
