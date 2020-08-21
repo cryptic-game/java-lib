@@ -13,9 +13,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.sentry.Sentry;
 import net.cryptic_game.microservice.config.Config;
 import net.cryptic_game.microservice.config.DefaultConfig;
-import net.cryptic_game.microservice.db.Database;
 import net.cryptic_game.microservice.endpoint.MicroServiceEndpoint;
 import net.cryptic_game.microservice.endpoint.UserEndpoint;
+import net.cryptic_game.microservice.sql.SqlService;
 import net.cryptic_game.microservice.utils.JSON;
 import net.cryptic_game.microservice.utils.JSONBuilder;
 import net.cryptic_game.microservice.utils.Tuple;
@@ -28,6 +28,7 @@ import org.reflections.Reflections;
 import org.reflections.ReflectionsException;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
+import javax.persistence.Entity;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -69,7 +70,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
             Sentry.init(Config.get(DefaultConfig.SENTRY_DSN));
         }
 
-        new Database();
+        final SqlService instance = SqlService.getInstance();
+        new Reflections("net.cryptic_game.microservice").getTypesAnnotatedWith(Entity.class).forEach(instance::addEntity);
 
         init();
         start();

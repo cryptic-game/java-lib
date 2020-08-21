@@ -1,6 +1,6 @@
 package net.cryptic_game.microservice.model;
 
-import net.cryptic_game.microservice.db.Database;
+import net.cryptic_game.microservice.sql.SqlService;
 import org.hibernate.Session;
 import org.hibernate.annotations.Type;
 
@@ -20,7 +20,7 @@ public abstract class Model {
     }
 
     public void delete() {
-        Session session = Database.getInstance().openSession();
+        Session session = SqlService.getInstance().openSession();
         session.beginTransaction();
 
         session.delete(this);

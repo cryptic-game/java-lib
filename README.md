@@ -1,4 +1,4 @@
-# cryptic-java-lib [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=cryptic-game_java-lib&metric=coverage)](https://sonarcloud.io/dashboard?id=cryptic-game_java-lib)
+# cryptic-java-lib
 
 This is a microservice-library for java of cryptic-game.
 
@@ -10,23 +10,8 @@ Just use the [microservice template](https://github.com/cryptic-game/microservic
 
 To import this libary you can use [maven](https://maven.apache.org/) like this:
 
+FIX ME
 ```xml
-<repositories>
-	<repository>
-	    <id>jitpack.io</id>
-	    <url>https://jitpack.io</url>
-	</repository>
-</repositories>
-	
-	...
-
-<dependencies>
-	<dependency>
-		<groupId>com.github.cryptic-game</groupId>
-		<artifactId>java-lib</artifactId>
-		<version>master-SNAPSHOT</version>
-	</dependency>
-</dependencies>
 ```
 
 The repository is hosted by [JitPack](https://jitpack.io/#cryptic-game/java-lib).
@@ -41,11 +26,11 @@ Your microservice will be supported by the [game-server of cryptic](https://gith
 |-------------------|---------------|  
 | MSSOCKET_HOST     | 127.0.0.1     |  
 | MSSOCKET_PORT     | 1239          |  
-| MYSQL_HOSTNAME    | cryptic       |
-| MYSQL_PORT        | 3306          |
-| MYSQL_USERNAME    | cryptic       |
-| MYSQL_PASSWORD    | cryptic       |
-| MYSQL_DATABASE    | cryptic       |
+| SQL_SERVER_TYPE  | [MARIADB_10_03](https://github.com/cryptic-game/java-lib/blob/master/src/main/java/net/cryptic_game/microservice/sql/SqlServerType.java#L11-L14)    |
+| SQL_SERVER_LOCATION     | //localhost:3306 |
+| SQL_SERVER_USERNAME     | cryptic          |
+| SQL_SERVER_PASSWORD     | cryptic          |
+| SQL_SERVER_DATABASE     | cryptic          |
 | STORAGE_LOCATION  | data/         |  
 
 ## Wiki
