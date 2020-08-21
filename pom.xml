@@ -4,8 +4,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.cryptic-game</groupId>
-    <artifactId>microservice</artifactId>
-    <version>0.1.1</version>
+    <artifactId>java-lib</artifactId>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
 
     <name>cryptic-game-microservice-lib</name>
@@ -30,6 +30,14 @@
             </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>bintray-jannikemmerich-cryptic</id>
+            <name>jannikemmerich-cryptic</name>
+            <url>https://api.bintray.com/maven/jannikemmerich/cryptic/java-lib/;publish=1</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
