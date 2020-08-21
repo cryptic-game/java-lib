@@ -20,6 +20,10 @@ import net.cryptic_game.microservice.utils.JSON;
 import net.cryptic_game.microservice.utils.JSONBuilder;
 import net.cryptic_game.microservice.utils.Tuple;
 import net.cryptic_game.microservice.wrapper.User;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -62,6 +66,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
     private Channel channel;
 
     public MicroService(String name) {
+        setLoglevel(Level.getLevel(Config.get(DefaultConfig.LOG_LEVEL)));
         this.name = name;
 
         instance = this;
@@ -75,6 +80,13 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         init();
         start();
+    }
+
+    private static void setLoglevel(final Level level) {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        final LoggerConfig loggerConfig = ctx.getConfiguration().getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        loggerConfig.setLevel(level);
+        ctx.updateLoggers();
     }
 
     public static MicroService getInstance() {

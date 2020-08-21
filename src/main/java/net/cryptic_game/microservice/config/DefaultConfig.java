@@ -18,6 +18,7 @@ public enum DefaultConfig {
 
     PRODUCTIVE(true),
     STORAGE_LOCATION("data/"),
+    LOG_LEVEL("WARN"),
     SENTRY_DSN("");
 
 
