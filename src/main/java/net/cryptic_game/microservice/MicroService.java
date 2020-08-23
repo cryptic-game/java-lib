@@ -2,6 +2,7 @@ package net.cryptic_game.microservice;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -31,6 +32,8 @@ import org.json.simple.parser.ParseException;
 import org.reflections.Reflections;
 import org.reflections.ReflectionsException;
 import org.reflections.scanners.MethodAnnotationsScanner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.Entity;
 import java.lang.reflect.InvocationTargetException;
@@ -51,9 +54,11 @@ import static net.cryptic_game.microservice.utils.JSONUtils.checkData;
 import static net.cryptic_game.microservice.utils.SocketUtils.send;
 import static net.cryptic_game.microservice.utils.SocketUtils.sendError;
 
+@ChannelHandler.Sharable
 public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
     private static final boolean E_POLL = Epoll.isAvailable();
+    private static final Logger LOG = LoggerFactory.getLogger(MicroService.class);
 
     private static MicroService instance;
 
@@ -141,10 +146,9 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             channel.closeFuture().syncUninterruptibly();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.warn(e.getMessage());
 
-            Sentry.capture(e);
-
+            group.shutdownGracefully().syncUninterruptibly();
             try {
                 Thread.sleep(10000L);
             } catch (InterruptedException ignored) {
