@@ -77,6 +77,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
         final SqlService instance = SqlService.getInstance();
         new Reflections("net.cryptic_game.microservice").getTypesAnnotatedWith(Entity.class).forEach(instance::addEntity);
+        instance.start();
 
         init();
         start();
