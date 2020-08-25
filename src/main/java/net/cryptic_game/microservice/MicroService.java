@@ -146,7 +146,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
             channel.closeFuture().syncUninterruptibly();
         } catch (Exception e) {
-            LOG.warn(e.getMessage());
+            LOG.warn(e.toString(), e);
 
             group.shutdownGracefully().syncUninterruptibly();
             try {
