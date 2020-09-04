@@ -1,11 +1,7 @@
 package net.cryptic_game.microservice;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -38,18 +34,9 @@ import org.slf4j.LoggerFactory;
 import javax.persistence.Entity;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-import static net.cryptic_game.microservice.error.ServerError.INTERNAL_ERROR;
-import static net.cryptic_game.microservice.error.ServerError.MISSING_PARAMETERS;
-import static net.cryptic_game.microservice.error.ServerError.UNKNOWN_SERVICE;
-import static net.cryptic_game.microservice.error.ServerError.UNSUPPORTED_FORMAT;
+import static net.cryptic_game.microservice.error.ServerError.*;
 import static net.cryptic_game.microservice.utils.JSONUtils.checkData;
 import static net.cryptic_game.microservice.utils.SocketUtils.send;
 import static net.cryptic_game.microservice.utils.SocketUtils.sendError;
@@ -59,6 +46,7 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
 
     private static final boolean E_POLL = Epoll.isAvailable();
     private static final Logger LOG = LoggerFactory.getLogger(MicroService.class);
+    private static final EventLoopGroup EVENT_LOOP_GROUP = E_POLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
 
     private static MicroService instance;
 
@@ -126,15 +114,15 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
     }
 
     private void start() {
-        EventLoopGroup group = E_POLL ? new EpollEventLoopGroup() : new NioEventLoopGroup();
+        final JSONObject registration = JSONBuilder.anJSON()
+                .add("action", "register")
+                .add("name", name)
+                .build();
+        Channel channel = null;
 
         try {
-            JSONObject registration = JSONBuilder.anJSON()
-                    .add("action", "register")
-                    .add("name", name)
-                    .build();
-
-            Channel channel = new Bootstrap().group(group)
+            channel = new Bootstrap()
+                    .group(EVENT_LOOP_GROUP)
                     .channel(E_POLL ? EpollSocketChannel.class : NioSocketChannel.class)
                     .handler(new MicroServiceInitializer(this))
                     .connect(Config.get(DefaultConfig.MSSOCKET_HOST), Config.getInteger(DefaultConfig.MSSOCKET_PORT))
@@ -143,14 +131,23 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
             this.channel = channel;
 
             channel.writeAndFlush(registration.toString());
-
             channel.closeFuture().syncUninterruptibly();
+
         } catch (Exception e) {
             LOG.warn(e.toString(), e);
+        } finally {
+            if (channel != null) {
+                try {
+                    channel.close().syncUninterruptibly();
+                } catch (Exception e) {
+                    LOG.warn("Unable to close channel: " + e.toString(), e);
+                }
+            }
 
-            group.shutdownGracefully().syncUninterruptibly();
+            LOG.info("Reconnection in 10 seconds...");
+
             try {
-                Thread.sleep(10000L);
+                Thread.sleep(10000L); // 10 seconds
             } catch (InterruptedException ignored) {
             }
 
