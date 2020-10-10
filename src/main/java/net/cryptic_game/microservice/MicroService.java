@@ -225,7 +225,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
                     }
 
                     return result;
-                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ignored) {
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+                    LOG.error("Error executing endpoint {}.", endpoint, e);
                     return INTERNAL_ERROR.getResponse();
                 }
             } else {
@@ -251,7 +252,8 @@ public abstract class MicroService extends SimpleChannelInboundHandler<String> {
                     }
 
                     return result;
-                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ignored) {
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+                    LOG.error("Error executing endpoint {}.", endpoint, e);
                     return INTERNAL_ERROR.getResponse();
                 }
             } else {
