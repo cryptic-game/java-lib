@@ -34,7 +34,6 @@ Your microservice will be supported by the [game-server of cryptic](https://gith
 | PRODUCTIVE  | true         |  
 | STORAGE_LOCATION  | data/         |  
 | LOG_LEVEL  | WARN         |  
-| SENTRY_DSN  |          |  
 
 ## Wiki
 
